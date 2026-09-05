@@ -66,14 +66,16 @@
     guideHtml =
       "<div class=\"guide\"><b>パソコンをお使いの方</b><br>" +
       "<b>Ctrl+D</b>（Macは<b>⌘+D</b>）を押してブックマーク登録してください。<br>" +
-      "次回からそのブックマークを開くだけで、この日記帳へ直接移動します。</div>";
+      "次回からそのブックマークを開くだけで、この日記帳へ直接移動します。" +
+      "<br><span style=\"font-size:12px;color:#8a8a70;\">" +
+      "（このアプリ専用のアイコンは、反映に少し時間がかかる場合があります）</span></div>";
   }
 
   content.innerHTML =
-    "<p>まず、下の案内に沿ってブックマーク／ホーム画面への登録をおすすめします。</p>" +
+    "<p><b>①</b> まず、下の案内に沿ってブックマーク／ホーム画面への登録をしてください。</p>" +
     guideHtml +
-    "<p style=\"margin-top:20px;\">" +
-    "<a class=\"btn\" href=\"" + url + "\" target=\"_top\" id=\"openBtn\">日記帳を開く</a></p>";
+    "<p style=\"margin-top:20px;\"><b>②</b> 登録が終わったら、下のボタンで日記帳を開いてください。</p>" +
+    "<p><a class=\"btn\" href=\"" + url + "\" target=\"_top\" id=\"openBtn\">日記帳を開く</a></p>";
 
   document.getElementById("openBtn").addEventListener("click", function () {
     try { localStorage.setItem(storageKey, "1"); } catch (e) {}
