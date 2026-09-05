@@ -12,6 +12,10 @@
   body{font-family:sans-serif;text-align:center;padding-top:80px;background:#f5f5f0;}
   a.btn{display:inline-block;padding:16px 32px;background:#0B8043;color:white;text-decoration:none;border-radius:8px;font-size:18px;}
   .err{color:#a33;margin-top:24px;font-size:14px;}
+  .guide{max-width:420px;margin:20px auto 0;padding:16px 18px;background:#fff8e1;border:1px solid #e6c84a;border-radius:8px;font-size:14px;line-height:1.7;text-align:left;}
+  .guide b{color:#8a6d00;}
+  .arrow{font-size:15px;text-align:center;margin-top:8px;color:#8a6d00;animation:bounce 1.2s infinite;}
+  @keyframes bounce{0%,100%{transform:translateY(0);}50%{transform:translateY(6px);}}
 </style>
 </head>
 <body>
@@ -24,14 +28,56 @@
   var params = new URLSearchParams(window.location.search);
   var sheetId = params.get("sheet");
   var content = document.getElementById("content");
-  if (sheetId) {
-    var url = "https://docs.google.com/spreadsheets/d/" + sheetId + "/edit";
-    content.innerHTML = "<p>日記帳を開いています...</p>";
-    window.location.href = url;
-  } else {
+  if (!sheetId) {
     content.innerHTML =
       "<p class=\"err\">起動用リンクにご自身のスプレッドシートIDが含まれていないようです。<br>取扱説明書に記載の正しいリンクをお使いください。</p>";
+    return;
   }
+  var url = "https://docs.google.com/spreadsheets/d/" + sheetId + "/edit";
+  var storageKey = "diaryGuideSeen_" + sheetId;
+  var alreadySeen = false;
+  try { alreadySeen = localStorage.getItem(storageKey) === "1"; } catch (e) {}
+
+  if (alreadySeen) {
+    content.innerHTML = "<p>日記帳を開いています...</p>";
+    window.location.href = url;
+    return;
+  }
+
+  var ua = navigator.userAgent;
+  var isIOS = /iP(hone|od|ad)/.test(ua) ||
+    (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+  var isAndroid = /Android/.test(ua);
+
+  var guideHtml;
+  if (isIOS) {
+    guideHtml =
+      "<div class=\"guide\"><b>iPhone/iPadをお使いの方</b><br>" +
+      "画面下部（iPadは上部）の共有ボタン（四角に上矢印のアイコン）をタップし、" +
+      "「ホーム画面に追加」を選んでください。<br>" +
+      "次回からアイコンをタップするだけで、この日記帳へ直接移動します。" +
+      "<div class=\"arrow\">↓ 共有ボタンをタップしてください</div></div>";
+  } else if (isAndroid) {
+    guideHtml =
+      "<div class=\"guide\"><b>Androidをお使いの方</b><br>" +
+      "画面右上の「︙」メニューを開き、「ホーム画面に追加」を選んでください。<br>" +
+      "次回からアイコンをタップするだけで、この日記帳へ直接移動します。</div>";
+  } else {
+    guideHtml =
+      "<div class=\"guide\"><b>パソコンをお使いの方</b><br>" +
+      "<b>Ctrl+D</b>（Macは<b>⌘+D</b>）を押してブックマーク登録してください。<br>" +
+      "次回からそのブックマークを開くだけで、この日記帳へ直接移動します。</div>";
+  }
+
+  content.innerHTML =
+    "<p>まず、下の案内に沿ってブックマーク／ホーム画面への登録をおすすめします。</p>" +
+    guideHtml +
+    "<p style=\"margin-top:20px;\">" +
+    "<a class=\"btn\" href=\"" + url + "\" target=\"_top\" id=\"openBtn\">日記帳を開く</a></p>";
+
+  document.getElementById("openBtn").addEventListener("click", function () {
+    try { localStorage.setItem(storageKey, "1"); } catch (e) {}
+  });
 })();
 </script>
 </body>
