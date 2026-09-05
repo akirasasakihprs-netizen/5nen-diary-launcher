@@ -11,11 +11,29 @@
 <style>
   body{font-family:sans-serif;text-align:center;padding-top:80px;background:#f5f5f0;}
   a.btn{display:inline-block;padding:16px 32px;background:#0B8043;color:white;text-decoration:none;border-radius:8px;font-size:18px;}
+  .err{color:#a33;margin-top:24px;font-size:14px;}
 </style>
 </head>
 <body>
-<h2>5年日記帳 起動テスト（静的HTML版）</h2>
-<p>このボタンから日記帳を開きます</p>
-<a class="btn" href="https://docs.google.com/spreadsheets/d/1QL1OjFF7NYLzXGzT7bZugAZZsEhrtBMdbWXN1313yws/edit" target="_top">日記帳を開く</a>
+<h2>5年日記帳</h2>
+<div id="content">
+  <p>読み込み中...</p>
+</div>
+<script>
+(function(){
+  var params = new URLSearchParams(window.location.search);
+  var sheetId = params.get("sheet");
+  var content = document.getElementById("content");
+  if (sheetId) {
+    var url = "https://docs.google.com/spreadsheets/d/" + sheetId + "/edit";
+    content.innerHTML =
+      "<p>このボタンから日記帳を開きます</p>" +
+      "<a class=\"btn\" href=\"" + url + "\" target=\"_top\">日記帳を開く</a>";
+  } else {
+    content.innerHTML =
+      "<p class=\"err\">起動用リンクにご自身のスプレッドシートIDが含まれていないようです。<br>取扱説明書に記載の正しいリンクをお使いください。</p>";
+  }
+})();
+</script>
 </body>
 </html>
