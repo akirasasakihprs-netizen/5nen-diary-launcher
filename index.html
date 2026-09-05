@@ -26,9 +26,8 @@
   var content = document.getElementById("content");
   if (sheetId) {
     var url = "https://docs.google.com/spreadsheets/d/" + sheetId + "/edit";
-    content.innerHTML =
-      "<p>このボタンから日記帳を開きます</p>" +
-      "<a class=\"btn\" href=\"" + url + "\" target=\"_top\">日記帳を開く</a>";
+    content.innerHTML = "<p>日記帳を開いています...</p>";
+    window.location.href = url;
   } else {
     content.innerHTML =
       "<p class=\"err\">起動用リンクにご自身のスプレッドシートIDが含まれていないようです。<br>取扱説明書に記載の正しいリンクをお使いください。</p>";
