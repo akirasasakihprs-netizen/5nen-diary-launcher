@@ -1,4 +1,22 @@
 <!DOCTYPE html>
+<!--
+  5年日記帳 起動用ランチャーページ（GitHub Pages）
+  Version: 1.0
+  最終更新: (コミット確定後にここへ実際の日時を記入)
+
+  変更履歴:
+    v1.0 (2026-09-06): 初回リリースとしてバージョン管理を開始。
+      - 自動遷移（ボタンなしで日記帳へ直接移動、2回目以降）
+      - 端末別の初回案内（PC/Android/iOS）をlocalStorageで初回のみ表示
+      - iOS向けはショートカットアプリでの直接起動を推奨し、URLコピー機能を追加
+    (このバージョン以前の変更履歴は、Coworkプロジェクトドキュメント
+     「v0.80.8_セットアップ完了ダイアログ_GitHub Pagesランチャー導線追加」を参照)
+
+  今後この行を編集する際は、
+    1. Versionを必ず1つ上げる（同じ番号を使い回さない）
+    2. 最終更新には、実際にGitHubへコミットが完了した後の日時を記入する（予測時刻は書かない）
+    3. 変更履歴に、変更内容を1行で追記する
+-->
 <html>
 <head>
 <meta charset="UTF-8">
@@ -52,11 +70,23 @@
   var guideHtml;
   if (isIOS) {
     guideHtml =
-      "<div class=\"guide\"><b>iPhone/iPadをお使いの方</b><br>" +
-      "画面下部（iPadは上部）の共有ボタン（四角に上矢印のアイコン）をタップし、" +
-      "「ホーム画面に追加」を選んでください。<br>" +
-      "次回からアイコンをタップするだけで、この日記帳へ直接移動します。" +
-      "<div class=\"arrow\">↓ 共有ボタンをタップしてください</div></div>";
+      "<div class=\"guide\"><b>iPhone/iPadをお使いの方（おすすめの方法）</b><br>" +
+      "下のボタンで日記帳のURLをコピーし、「ショートカット」アプリで新しいショートカットを作り、" +
+      "アクション「URLを開く」にこのURLを貼り付けてホーム画面に追加してください。" +
+      "この方法だと、ログイン画面やGoogleの案内が出ず、日記帳の画面だけがすぐに開きます。<br>" +
+      "<button type=\"button\" id=\"copyUrlBtn\" style=\"margin-top:10px;padding:8px 16px;font-size:14px;border-radius:6px;border:1px solid #0B8043;background:#fff;color:#0B8043;\">" +
+      "日記帳のURLをコピー</button> " +
+      "<span id=\"copyStatus\" style=\"font-size:12px;color:#0B8043;\"></span>" +
+      "<details style=\"margin-top:10px;\"><summary style=\"cursor:pointer;\">ショートカットの作り方（詳しく）</summary>" +
+      "<div style=\"margin-top:8px;font-size:13px;\">" +
+      "①「ショートカット」アプリを開く<br>" +
+      "② 右上の「＋」で新規ショートカットを作成<br>" +
+      "③「アクションを追加」→「URLを開く」を選ぶ<br>" +
+      "④ URL欄に、コピーしたURLを貼り付ける<br>" +
+      "⑤ 名前を付けて、共有ボタン→「ホーム画面に追加」で登録する" +
+      "</div></details>" +
+      "<p style=\"margin-top:10px;font-size:12px;color:#8a8a70;\">" +
+      "（簡単な方法として、この画面をそのままホーム画面に追加することもできますが、まれにログイン画面が表示されることがあります）</p></div>";
   } else if (isAndroid) {
     guideHtml =
       "<div class=\"guide\"><b>Androidをお使いの方</b><br>" +
@@ -80,6 +110,25 @@
   document.getElementById("openBtn").addEventListener("click", function () {
     try { localStorage.setItem(storageKey, "1"); } catch (e) {}
   });
+
+  if (isIOS) {
+    var copyBtn = document.getElementById("copyUrlBtn");
+    if (copyBtn) {
+      copyBtn.addEventListener("click", function () {
+        var status = document.getElementById("copyStatus");
+        function showCopied() {
+          if (status) { status.textContent = "コピーしました"; }
+        }
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(url).then(showCopied).catch(function () {
+            if (status) { status.textContent = "コピーできませんでした。下のURLを長押しでコピーしてください：" + url; }
+          });
+        } else {
+          if (status) { status.textContent = url; }
+        }
+      });
+    }
+  }
 })();
 </script>
 </body>
