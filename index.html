@@ -1,10 +1,21 @@
 <!DOCTYPE html>
 <!--
   5年日記帳帳起動用ランチャーページ（GitHub Pages）
-  Version: 1.2
+  Version: 1.3
  最終更新: （コミット完了後の実際の日時をここに記入してください）
 
   変更履歴:
+    v1.3（コミット後に日付を記入）: PCで本物の「PWA（Webアプリ）としてインストール」
+      できるようにするための変更。manifest.jsonのstart_urlが省略されていたため
+      Chromeがインストール可能なアプリと認識していなかったことが判明。対策として、
+      (1) manifest.jsonのstart_urlを固定の"index.html"に変更し、scopeも追加、
+      (2) 最小限のサービスワーカー（sw.js）を新規追加してこのページから登録、
+      (3) このスクリプトで、?sheet=付きURLで訪問した際にそのスプレッドシートIDを
+      localStorageに保存しておき、?sheet=が付いていない状態で起動された場合
+      （＝インストール済みアプリのアイコンから起動した場合）は保存済みのIDを
+      読み込んで使うように変更。これにより、manifest.jsonは全ユーザー共通の
+      固定ファイルのままで、各ユーザーは自分のスプレッドシートへ辿り着ける。
+      ※Chromeが実際にインストールを提案してくるようになるかは未検証。
     v1.2（コミット後に日付を記入）: v1.1をGitHubに反映した際、ファイルの先頭に
       誤って余分なテキスト（「/」の行と空白行、および「Index v8 manifest ・ TXT」
       という文字列）が紛れ込んでしまい、ページ上部に意図しない表示が出てしまって
@@ -59,6 +70,18 @@
   var params = new URLSearchParams(window.location.search);
   var sheetId = params.get("sheet");
   var content = document.getElementById("content");
+
+  if ("serviceWorker" in navigator) {
+    try { navigator.serviceWorker.register("sw.js"); } catch (e) {}
+  }
+
+  var SAVED_SHEET_KEY = "savedSheetId";
+  if (sheetId) {
+    try { localStorage.setItem(SAVED_SHEET_KEY, sheetId); } catch (e) {}
+  } else {
+    try { sheetId = localStorage.getItem(SAVED_SHEET_KEY) || ""; } catch (e) { sheetId = ""; }
+  }
+
   if (!sheetId) {
     content.innerHTML =
       "<p class=\"err\">起動用リンクにご自身のスプレッドシートIDが含まれていないようです。<br>取扱説明書に記載の正しいリンクをお使いください。</p>";
