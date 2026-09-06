@@ -1,6 +1,8 @@
 {
   "name": "5年日記帳",
   "short_name": "5年日記帳",
+  "start_url": "index.html",
+  "scope": "./",
   "display": "standalone",
   "background_color": "#f5f5f0",
   "theme_color": "#0B8043",
