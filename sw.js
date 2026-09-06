@@ -1,6 +1,7 @@
-// 5年日記帳ランチャーページ用の最小限のサービスワーカー
-// ChromeのPWAインストール判定を満たすためだけに追加しています。
-// オフライン動作やキャッシュ制御は行っていません（そのままネットワークに委ねます）。
+// 5年日記帳ランチャーページ用のサービスワーカー
+// ChromeのPWAインストール判定を満たすために、中身のあるfetchハンドラーを実装しています。
+// （空のfetchハンドラーはChromeが「無効」として無視するため、実際にネットワーク
+// 　リクエストを中継する処理を書く必要があります）
 
 self.addEventListener("install", function (event) {
   self.skipWaiting();
@@ -11,5 +12,11 @@ self.addEventListener("activate", function (event) {
 });
 
 self.addEventListener("fetch", function (event) {
-  // 何もしない（通常のネットワークリクエストをそのまま通す）
+  event.respondWith(
+    fetch(event.request).catch(function () {
+      // オフライン時などフェッチに失敗した場合は、そのまま何も返さない
+      // （キャッシュによるオフライン対応は行っていません）
+      return new Response("", { status: 504, statusText: "Network error" });
+    })
+  );
 });
