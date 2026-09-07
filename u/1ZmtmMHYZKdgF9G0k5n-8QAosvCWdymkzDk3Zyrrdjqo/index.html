@@ -1,27 +1,5 @@
 <!DOCTYPE html>
 <html lang="ja">
-<!--
-  5年日記帳 起動ページ（ユーザー専用フォルダ版）
-  Version: 2.0（ユーザーごと専用フォルダ方式）
-  最終更新: （コミット完了後の実際の日時をここに記入してください）
-
-  変更履歴:
-    v2.0（コミット後に日付を記入）: v1.x系（全ユーザー共通のmanifest.json＋
-      localStorageによるシートID記憶方式）で、「同じ端末で別のシートIDへの
-      リンクを開くと、既存のデスクトップ／ホーム画面アイコンの行き先が
-      静かに上書きされてしまう」という重大な問題が発覚したため、方式を
-      全面変更。このファイルはユーザー1人につき専用のフォルダ
-      （/5nen-diary-launcher/u/（そのユーザーのスプレッドシートID）/）に
-      配置し、スプレッドシートIDをURLパラメータやlocalStorageに頼らず、
-      このファイル自身に直接埋め込む方式にした。これにより、他のリンクを
-      同じ端末で開いても、このアイコンの行き先が変わることは物理的に
-      起こらなくなる。
-      あわせて、PC向けの案内文を「Ctrl+Dブックマーク推奨」から
-      「PWA（Webアプリ）としてのインストール推奨」に変更（ブックマークの
-      faviconキャッシュが不安定なため）。
-      アイコン画像・サービスワーカー（sw.js）は、これまで通り
-      /5nen-diary-launcher/ 直下の共通ファイルをそのまま利用する。
--->
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -46,30 +24,23 @@
 </div>
 <script>
 (function(){
-  // このページ専用のスプレッドシートID（他のユーザーと共有しない、このファイル固有の値）
   var sheetId = "1ZmtmMHYZKdgF9G0k5n-8QAosvCWdymkzDk3Zyrrdjqo";
   var content = document.getElementById("content");
-
   if ("serviceWorker" in navigator) {
     try { navigator.serviceWorker.register("/5nen-diary-launcher/sw.js"); } catch (e) {}
   }
-
   var url = "https://docs.google.com/spreadsheets/d/" + sheetId + "/edit";
   var storageKey = "diaryGuideSeen_" + sheetId;
   var alreadySeen = false;
   try { alreadySeen = localStorage.getItem(storageKey) === "1"; } catch (e) {}
-
   if (alreadySeen) {
     content.innerHTML = "<p>日記帳を開いています...</p>";
     window.location.href = url;
     return;
   }
-
   var ua = navigator.userAgent;
-  var isIOS = /iP(hone|od|ad)/.test(ua) ||
-    (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+  var isIOS = /iP(hone|od|ad)/.test(ua) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
   var isAndroid = /Android/.test(ua);
-
   var guideHtml;
   if (isIOS) {
     guideHtml =
@@ -104,25 +75,20 @@
       "<br><span style=\"font-size:12px;color:#8a8a70;\">" +
       "（インストールのアイコンが出ない場合は、代わりに<b>Ctrl+D</b>［Macは<b>⌘+D</b>］でブックマーク登録することもできます）</span></div>";
   }
-
   content.innerHTML =
     "<p><b>①</b> まず、下の案内に沿ってホーム画面／デスクトップへの登録をしてください。</p>" +
     guideHtml +
     "<p style=\"margin-top:20px;\"><b>②</b> 登録が終わったら、下のボタンで日記帳を開いてください。</p>" +
     "<p><a class=\"btn\" href=\"" + url + "\" target=\"_top\" id=\"openBtn\">日記帳を開く</a></p>";
-
   document.getElementById("openBtn").addEventListener("click", function () {
     try { localStorage.setItem(storageKey, "1"); } catch (e) {}
   });
-
   if (isIOS) {
     var copyBtn = document.getElementById("copyUrlBtn");
     if (copyBtn) {
       copyBtn.addEventListener("click", function () {
         var status = document.getElementById("copyStatus");
-        function showCopied() {
-          if (status) { status.textContent = "コピーしました"; }
-        }
+        function showCopied() { if (status) { status.textContent = "コピーしました"; } }
         if (navigator.clipboard && navigator.clipboard.writeText) {
           navigator.clipboard.writeText(url).then(showCopied).catch(function () {
             if (status) { status.textContent = "コピーできませんでした。下のURLを長押しでコピーしてください：" + url; }
