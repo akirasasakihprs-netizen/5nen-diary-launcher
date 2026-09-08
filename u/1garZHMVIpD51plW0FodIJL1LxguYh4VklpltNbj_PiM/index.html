@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>5年日記帳</title>
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="/5nen-diary-launcher/icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="5年日記帳">
+<style>
+  body{font-family:sans-serif;text-align:center;padding-top:80px;background:#f5f5f0;}
+  a.btn{display:inline-block;padding:16px 32px;background:#0B8043;color:white;text-decoration:none;border-radius:8px;font-size:18px;}
+  .err{color:#a33;margin-top:24px;font-size:14px;}
+  .guide{max-width:420px;margin:20px auto 0;padding:16px 18px;background:#fff8e1;border:1px solid #e6c84a;border-radius:8px;font-size:14px;line-height:1.7;text-align:left;}
+  .guide b{color:#8a6d00;}
+</style>
+</head>
+<body>
+<h2>5年日記帳</h2>
+<div id="content">
+  <p>読み込み中...</p>
+</div>
+<script>
+(function(){
+  var sheetId = "1garZHMVIpD51plW0FodIJL1LxguYh4VklpltNbj_PiM";
+  var content = document.getElementById("content");
+  if ("serviceWorker" in navigator) {
+    try { navigator.serviceWorker.register("/5nen-diary-launcher/sw.js"); } catch (e) {}
+  }
+  var url = "https://docs.google.com/spreadsheets/d/" + sheetId + "/edit";
+  var storageKey = "diaryGuideSeen_" + sheetId;
+  var alreadySeen = false;
+  try { alreadySeen = localStorage.getItem(storageKey) === "1"; } catch (e) {}
+  if (alreadySeen) {
+    content.innerHTML = "<p>日記帳を開いています...</p>";
+    window.location.href = url;
+    return;
+  }
+  var ua = navigator.userAgent;
+  var isIOS = /iP(hone|od|ad)/.test(ua) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+  var isAndroid = /Android/.test(ua);
+  var guideHtml;
+  if (isIOS) {
+    guideHtml =
+      "<div class=\"guide\"><b>iPhone/iPadをお使いの方（おすすめの方法）</b><br>" +
+      "下のボタンで日記帳のURLをコピーし、「ショートカット」アプリで新しいショートカットを作り、" +
+      "アクション「URLを開く」にこのURLを貼り付けてホーム画面に追加してください。" +
+      "この方法だと、ログイン画面やGoogleの案内が出ず、日記帳の画面だけがすぐに開きます。<br>" +
+      "<button type=\"button\" id=\"copyUrlBtn\" style=\"margin-top:10px;padding:8px 16px;font-size:14px;border-radius:6px;border:1px solid #0B8043;background:#fff;color:#0B8043;\">" +
+      "日記帳のURLをコピー</button> " +
+      "<span id=\"copyStatus\" style=\"font-size:12px;color:#0B8043;\"></span>" +
+      "<details style=\"margin-top:10px;\"><summary style=\"cursor:pointer;\">ショートカットの作り方（詳しく）</summary>" +
+      "<div style=\"margin-top:8px;font-size:13px;\">" +
+      "①「ショートカット」アプリを開く<br>" +
+      "② 右上の「＋」で新規ショートカットを作成<br>" +
+      "③「アクションを追加」→「URLを開く」を選ぶ<br>" +
+      "④ URL欄に、コピーしたURLを貼り付ける<br>" +
+      "⑤ 名前を付けて、共有ボタン→「ホーム画面に追加」で登録する" +
+      "</div></details>" +
+      "<p style=\"margin-top:10px;font-size:12px;color:#8a8a70;\">" +
+      "（簡単な方法として、この画面をそのままホーム画面に追加することもできますが、まれにログイン画面が表示されることがあります）</p></div>";
+  } else if (isAndroid) {
+    guideHtml =
+      "<div class=\"guide\"><b>Androidをお使いの方</b><br>" +
+      "画面右上の「︙」メニューを開き、「ホーム画面に追加」を選んでください。<br>" +
+      "次回からアイコンをタップするだけで、この日記帳へ直接移動します。</div>";
+  } else {
+    guideHtml =
+      "<div class=\"guide\"><b>パソコンをお使いの方（推奨の方法）</b><br>" +
+      "このページの何もない場所を1回クリックしてから、30秒ほどそのまま待ってください。" +
+      "アドレスバーの右側に「インストール」のアイコンが表示されたら、それを押してインストールしてください。<br>" +
+      "インストールすると、デスクトップやタスクバーに専用アイコンが追加され、次回からそこをクリックするだけで日記帳が開きます。" +
+      "<br><span style=\"font-size:12px;color:#8a8a70;\">" +
+      "（インストールのアイコンが出ない場合は、代わりに<b>Ctrl+D</b>［Macは<b>⌘+D</b>］でブックマーク登録することもできます）</span></div>";
+  }
+  content.innerHTML =
+    "<p><b>①</b> まず、下の案内に沿ってホーム画面／デスクトップへの登録をしてください。</p>" +
+    guideHtml +
+    "<p style=\"margin-top:20px;\"><b>②</b> 登録が終わったら、下のボタンで日記帳を開いてください。</p>" +
+    "<p><a class=\"btn\" href=\"" + url + "\" target=\"_top\" id=\"openBtn\">日記帳を開く</a></p>";
+  document.getElementById("openBtn").addEventListener("click", function () {
+    try { localStorage.setItem(storageKey, "1"); } catch (e) {}
+  });
+  if (isIOS) {
+    var copyBtn = document.getElementById("copyUrlBtn");
+    if (copyBtn) {
+      copyBtn.addEventListener("click", function () {
+        var status = document.getElementById("copyStatus");
+        function showCopied() { if (status) { status.textContent = "コピーしました"; } }
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(url).then(showCopied).catch(function () {
+            if (status) { status.textContent = "コピーできませんでした。下のURLを長押しでコピーしてください：" + url; }
+          });
+        } else {
+          if (status) { status.textContent = url; }
+        }
+      });
+    }
+  }
+})();
+</script>
+</body>
+</html>
