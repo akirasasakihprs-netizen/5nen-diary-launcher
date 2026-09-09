@@ -1,0 +1,21 @@
+{
+  "name": "5年日記帳",
+  "short_name": "5年日記帳",
+  "start_url": "/5nen-diary-launcher/u/1kcCzVCtTiLgqSFRFSl0Fo1n4_RAnmMpmjJDQAPbNRdc/index.html",
+  "scope": "/5nen-diary-launcher/u/1kcCzVCtTiLgqSFRFSl0Fo1n4_RAnmMpmjJDQAPbNRdc/",
+  "display": "standalone",
+  "background_color": "#f5f5f0",
+  "theme_color": "#0B8043",
+  "icons": [
+    {
+      "src": "/5nen-diary-launcher/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/5nen-diary-launcher/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
