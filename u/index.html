@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!--
+  5年日記帳 起動ページ（案A・試作版 2026-09-28）
+  ・このファイルは全員共通。sheetId・カレンダー名などの個人情報は一切含まない。
+  ・起動リンク「…/u/(ランダム)/#s=(sheetId)&n=(表示名)」の「#」以降は
+    ブラウザからサーバー(GitHub)へ送られない。ページはそれを読み取り、
+    このフォルダ専用の保存場所（端末のブラウザ内）に記録する。
+  ・?menu=1 を付けて開くと、自動で日記帳へ移動せず、表示名の変更などができる。
+  ・?static=1 を付けて開くと、動的マニフェスト（アプリ名の差し替え）を使わない（検証用）。
+-->
+<title>5年日記帳</title>
+<link rel="manifest" id="manifestLink" href="manifest.json">
+<link rel="apple-touch-icon" href="../../icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" id="appleTitle" content="5年日記帳">
+<meta name="robots" content="noindex, nofollow">
+<style>
+  body{font-family:sans-serif;text-align:center;padding-top:60px;background:#f5f5f0;margin:0 16px;}
+  a.btn{display:inline-block;padding:16px 32px;background:#0B8043;color:white;text-decoration:none;border-radius:8px;font-size:18px;}
+  .guide,.namebox{max-width:420px;margin:20px auto 0;padding:16px 18px;border-radius:8px;font-size:14px;line-height:1.7;text-align:left;}
+  .guide{background:#fff8e1;border:1px solid #e6c84a;}
+  .guide b{color:#8a6d00;}
+  .namebox{background:#fff;border:1px solid #cfd8cf;}
+  .namebox input{width:100%;box-sizing:border-box;padding:8px;font-size:15px;margin:6px 0;border:1px solid #aaa;border-radius:6px;}
+  .namebox button,.copybtn{padding:8px 16px;font-size:14px;border-radius:6px;border:1px solid #0B8043;background:#fff;color:#0B8043;cursor:pointer;}
+  .note{font-size:12px;color:#8a8a70;}
+  .warn{color:#a33;font-size:13px;margin-top:16px;}
+</style>
+</head>
+<body>
+<h2 id="heading">5年日記帳</h2>
+<div id="content"><p>読み込み中...</p></div>
+<script>
+(function () {
+  // ---- このフォルダ専用の保存キー（日記帳ごとに分かれる）----
+  var folderPath = location.pathname.replace(/index\.html$/, '');
+  var KEY = 'diary5y:' + folderPath;
+  var SEEN_KEY = KEY + ':seen';
+
+  var params = new URLSearchParams(location.search);
+  var menuMode = params.get('menu') === '1';
+  var useStaticManifest = params.get('static') === '1';
+
+  var content = document.getElementById('content');
+  var heading = document.getElementById('heading');
+
+  function isValidSheetId(s) {
+    return typeof s === 'string' && /^[A-Za-z0-9_-]{25,100}$/.test(s);
+  }
+  function cleanName(n) {
+    if (typeof n !== 'string') return '';
+    return n.replace(/[\u0000-\u001F\u007F]/g, '').trim().slice(0, 50);
+  }
+  function loadRecord() {
+    try {
+      var raw = localStorage.getItem(KEY);
+      if (!raw) return null;
+      var o = JSON.parse(raw);
+      if (!o || !isValidSheetId(o.s)) return null;
+      return { s: o.s, n: cleanName(o.n) };
+    } catch (e) { return null; }
+  }
+  function saveRecord(rec) {
+    try { localStorage.setItem(KEY, JSON.stringify(rec)); return true; } catch (e) { return false; }
+  }
+  function getSeen() {
+    try { return localStorage.getItem(SEEN_KEY) === '1'; } catch (e) { return false; }
+  }
+  function setSeen() {
+    try { localStorage.setItem(SEEN_KEY, '1'); } catch (e) {}
+  }
+
+  // ---- 1) 起動リンクの「#」以降を読み取り、この端末に保存 ----
+  var rec = null;
+  var storageOk = true;
+  if (location.hash.length > 1) {
+    var hp = new URLSearchParams(location.hash.slice(1));
+    var s = hp.get('s');
+    if (isValidSheetId(s)) {
+      rec = { s: s, n: cleanName(hp.get('n') || '') };
+      storageOk = saveRecord(rec);
+    }
+    // アドレス欄から「#」以降を消す（ブックマーク等に残さないため）
+    try { history.replaceState(null, '', location.pathname + location.search); } catch (e) {}
+  }
+  if (!rec) rec = loadRecord();
+
+  // ---- 2) 未登録の端末 ----
+  if (!rec) {
+    content.innerHTML =
+      '<p>この端末には、まだ日記帳が登録されていません。</p>' +
+      '<p class="note">セットアップ完了時に表示された「起動用リンク」から開いてください。</p>';
+    return;
+  }
+
+  var sheetUrl = 'https://docs.google.com/spreadsheets/d/' + rec.s + '/edit';
+
+  // ---- 3) 表示名（端末の中だけ）を反映 ----
+  function displayNameOf(r) {
+    return r.n ? ('5年日記帳（' + r.n + '）') : '5年日記帳';
+  }
+  function applyDynamicManifest(name) {
+    if (useStaticManifest) return;
+    try {
+      var base = new URL('./', location.href).href;
+      var m = {
+        id: base,
+        name: name,
+        short_name: '5年日記帳',
+        start_url: base,
+        scope: base,
+        display: 'standalone',
+        background_color: '#f5f5f0',
+        theme_color: '#0B8043',
+        icons: [
+          { src: new URL('../../icon-192.png', location.href).href, sizes: '192x192', type: 'image/png' },
+          { src: new URL('../../icon-512.png', location.href).href, sizes: '512x512', type: 'image/png' }
+        ]
+      };
+      var blob = new Blob([JSON.stringify(m)], { type: 'application/manifest+json' });
+      document.getElementById('manifestLink').setAttribute('href', URL.createObjectURL(blob));
+    } catch (e) {}
+  }
+  function applyName(r) {
+    var dn = displayNameOf(r);
+    document.title = dn;
+    heading.textContent = dn;
+    document.getElementById('appleTitle').setAttribute('content', dn);
+    applyDynamicManifest(dn);
+  }
+  applyName(rec);
+
+  if ('serviceWorker' in navigator) {
+    try { navigator.serviceWorker.register('../../sw.js'); } catch (e) {}
+  }
+
+  // ---- 4) 2回目以降は、すぐ日記帳へ ----
+  if (getSeen() && !menuMode) {
+    content.innerHTML = '<p>日記帳を開いています...</p>';
+    location.href = sheetUrl;
+    return;
+  }
+
+  // ---- 5) 初回（または ?menu=1）の案内画面 ----
+  var ua = navigator.userAgent;
+  var isIOS = /iP(hone|od|ad)/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  var isAndroid = /Android/.test(ua);
+  var isStandalone = false;
+  try {
+    isStandalone = (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) ||
+      window.navigator.standalone === true;
+  } catch (e) {}
+
+  function successHtml() {
+    return (isIOS || isAndroid)
+      ? '<p><b>✅ ホーム画面への追加が成功しました！</b></p><p>今後は、そのアイコンをタップするだけで日記帳が開けます。</p>'
+      : '<p><b>✅ デスクトップに専用アイコンのインストールが成功しました！</b></p><p>今後は、そのアイコンをクリックするだけで日記帳が開けます。</p>';
+  }
+
+  var guideHtml;
+  if (isIOS) {
+    guideHtml =
+      '<div class="guide"><b>iPhone/iPadをお使いの方（おすすめの方法）</b><br>' +
+      '下のボタンで日記帳のURLをコピーし、「ショートカット」アプリで新しいショートカットを作り、' +
+      'アクション「URLを開く」にこのURLを貼り付けてホーム画面に追加してください。' +
+      'ショートカットの名前は自由に付けられます。<br>' +
+      '<button type="button" class="copybtn" id="copyUrlBtn" style="margin-top:10px;">日記帳のURLをコピー</button> ' +
+      '<span id="copyStatus" style="font-size:12px;color:#0B8043;"></span>' +
+      '<details style="margin-top:10px;"><summary style="cursor:pointer;">ショートカットの作り方（詳しく）</summary>' +
+      '<div style="margin-top:8px;font-size:13px;">' +
+      '①「ショートカット」アプリを開く<br>② 右上の「＋」で新規ショートカットを作成<br>' +
+      '③「アクションを追加」→「URLを開く」を選ぶ<br>④ URL欄に、コピーしたURLを貼り付ける<br>' +
+      '⑤ 名前を付けて、共有ボタン→「ホーム画面に追加」で登録する</div></details></div>';
+  } else if (isAndroid) {
+    guideHtml =
+      '<div class="guide"><b>Androidをお使いの方</b><br>' +
+      '画面右上の「︙」メニューを開き、「ホーム画面に追加」を選んでください。<br>' +
+      '次回からアイコンをタップするだけで、この日記帳へ直接移動します。</div>';
+  } else {
+    guideHtml =
+      '<div class="guide"><b>パソコンをお使いの方（推奨の方法）</b><br>' +
+      'このページの何もない場所を1回クリックしてから、30秒ほどそのまま待ってください。' +
+      'アドレスバーの右側に「インストール」のアイコンが表示されたら、それを押してインストールしてください。<br>' +
+      '<span class="note">（インストールのアイコンが出ない場合は、代わりに<b>Ctrl+D</b>［Macは<b>⌘+D</b>］でブックマーク登録することもできます）</span></div>';
+  }
+
+  content.innerHTML =
+    '<div id="installStep">' +
+      (isStandalone ? successHtml() :
+        '<p><b>①</b> まず、下の案内に沿ってホーム画面／デスクトップへの登録をしてください。</p>' + guideHtml) +
+    '</div>' +
+    '<p id="stepTwo" style="margin-top:20px;"><b>②</b> 登録が終わったら、下のボタンで日記帳を開いてください。</p>' +
+    '<p><a class="btn" target="_top" id="openBtn">日記帳を開く</a></p>' +
+    '<div class="namebox"><b>この端末での表示名</b>' +
+      '<div class="note">アプリやタブに「5年日記帳（表示名）」と表示されます。この名前はこの端末の中にだけ保存され、外部には公開されません。</div>' +
+      '<input type="text" id="nameInput" maxlength="50">' +
+      '<button type="button" id="nameSaveBtn">表示名を変更</button> ' +
+      '<span id="nameStatus" style="font-size:12px;color:#0B8043;"></span>' +
+    '</div>' +
+    (storageOk ? '' :
+      '<p class="warn">この端末ではブラウザへの保存ができなかったため、次回もこの起動用リンクから開いてください。</p>');
+
+  var openBtn = document.getElementById('openBtn');
+  openBtn.setAttribute('href', sheetUrl);
+  openBtn.addEventListener('click', function () { setSeen(); });
+
+  var nameInput = document.getElementById('nameInput');
+  nameInput.value = rec.n;
+  document.getElementById('nameSaveBtn').addEventListener('click', function () {
+    rec.n = cleanName(nameInput.value);
+    nameInput.value = rec.n;
+    var ok = saveRecord(rec);
+    applyName(rec);
+    document.getElementById('nameStatus').textContent = ok ? '変更しました' : 'この端末では保存できませんでした';
+  });
+
+  function applyInstallSuccessUi() {
+    var step = document.getElementById('installStep');
+    if (step) step.innerHTML = successHtml();
+    var two = document.getElementById('stepTwo');
+    if (two) two.innerHTML = '<b>②</b> 登録が終わりました。下のボタンで日記帳を開いてください。';
+  }
+  window.addEventListener('appinstalled', applyInstallSuccessUi);
+  try {
+    if (window.matchMedia) {
+      var mq = window.matchMedia('(display-mode: standalone)');
+      var onChange = function (evt) { if (evt.matches) applyInstallSuccessUi(); };
+      if (mq.addEventListener) mq.addEventListener('change', onChange);
+      else if (mq.addListener) mq.addListener(onChange);
+    }
+  } catch (e) {}
+
+  if (isIOS) {
+    var copyBtn = document.getElementById('copyUrlBtn');
+    if (copyBtn) {
+      copyBtn.addEventListener('click', function () {
+        var status = document.getElementById('copyStatus');
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(sheetUrl).then(function () {
+            status.textContent = 'コピーしました';
+          }).catch(function () {
+            status.textContent = 'コピーできませんでした。次のURLを長押しでコピーしてください：' + sheetUrl;
+          });
+        } else {
+          status.textContent = sheetUrl;
+        }
+      });
+    }
+  }
+})();
+</script>
+</body>
+</html>
