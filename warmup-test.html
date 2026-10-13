@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>起こし役の試験</title>
+<style>
+  body { font-family: "Meiryo", sans-serif; background: #f5efe3; color: #1e2a44; margin: 0; padding: 24px 16px; }
+  h1 { font-size: 20px; margin: 0 0 12px; }
+  p { font-size: 14px; line-height: 1.6; }
+  button { font-size: 18px; padding: 14px 28px; border: 0; border-radius: 8px; background: #1e3a6b; color: #fff; cursor: pointer; }
+  button:disabled { background: #8a94a8; }
+  #log { margin-top: 16px; font-size: 13px; white-space: pre-wrap; background: #fff; border: 1px solid #d9c5a0; padding: 10px; min-height: 60px; }
+  #warm { position: absolute; left: -2000px; top: 0; width: 800px; height: 600px; border: 0; }
+  #warm.show { position: static; width: 100%; height: 360px; border: 1px solid #999; margin-top: 12px; }
+</style>
+</head>
+<body>
+<h1>起こし役の試験</h1>
+<p id="info"></p>
+<button id="go">日記帳を開く（試験）</button>
+<div id="log"></div>
+<iframe id="warm" title="起こし役"></iframe>
+<script>
+// 使い方：このページのアドレスの後ろに #id=スプレッドシートID&mode=iframe&wait=8 を付けて開く。
+//   mode=iframe：見えない枠でシートを一度読み込み、wait秒後に同じタブでシートへ移る
+//   mode=tab   ：新しいタブでシートを開き、wait秒後にそのタブを読み込み直させる
+//   mode=direct：比較用。すぐ同じタブでシートへ移る
+//   show=1     ：見えない枠を見える形にする（枠の中にシートが出るかの確認用）
+// スプレッドシートIDはページに書かない。#の後ろはGoogleにもGitHubにも送られない。
+(function () {
+  var p = {};
+  location.hash.replace(/^#/, '').split('&').forEach(function (kv) {
+    var i = kv.indexOf('='); if (i > 0) p[decodeURIComponent(kv.slice(0, i))] = decodeURIComponent(kv.slice(i + 1));
+  });
+  var id = (p.id || '').replace(/[^A-Za-z0-9_-]/g, '');
+  var mode = p.mode || 'iframe';
+  var wait = Math.max(0, Math.min(60, parseFloat(p.wait || '8') || 0));
+  var url = 'https://docs.google.com/spreadsheets/d/' + id + '/edit';
+  var logEl = document.getElementById('log'), btn = document.getElementById('go'), warm = document.getElementById('warm');
+  var t0 = 0;
+  function log(m) { var s = t0 ? ((Date.now() - t0) / 1000).toFixed(1) + '秒 ' : ''; logEl.textContent += s + m + '\n'; }
+  if (p.show === '1') warm.className = 'show';
+  document.getElementById('info').textContent = id
+    ? '方式：' + mode + '　待ち：' + wait + '秒'
+    : 'アドレスの後ろに #id=（スプレッドシートID） を付けて開いてください。';
+  if (!id) { btn.disabled = true; return; }
+  btn.addEventListener('click', function () {
+    btn.disabled = true; t0 = Date.now(); log('開始（' + new Date().toLocaleTimeString() + '）');
+    if (mode === 'direct') { location.href = url; return; }
+    if (mode === 'tab') {
+      var w = window.open(url, '_blank');
+      if (!w) { log('新しいタブを開けませんでした（ポップアップの許可を確認）'); return; }
+      log('新しいタブで開きました。' + wait + '秒後に読み込み直させます');
+      setTimeout(function () {
+        try {
+          if (w.closed) { log('新しいタブとのつながりが切れています（読み込み直しはできません）'); return; }
+          w.location.href = url; log('新しいタブを読み込み直させました');
+        } catch (e) { log('読み込み直しに失敗：' + e.message); }
+      }, wait * 1000);
+      return;
+    }
+    warm.addEventListener('load', function () { log('見えない枠の読み込みが終わりました'); }, { once: true });
+    warm.src = url; log('見えない枠で読み込み開始。' + wait + '秒後にシートへ移ります');
+    setTimeout(function () { log('シートへ移ります'); location.href = url; }, wait * 1000);
+  });
+})();
+</script>
+</body>
+</html>
