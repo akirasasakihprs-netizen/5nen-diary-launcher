@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>5年日記帳を開いています</title>
+<style>
+  body { font-family: "Meiryo", sans-serif; background: #f5efe3; color: #1e2a44; margin: 0; padding: 40px 16px; text-align: center; }
+  h1 { font-size: 22px; margin: 0 0 16px; }
+  #msg { font-size: 16px; }
+  #log { margin: 24px auto 0; max-width: 520px; text-align: left; font-size: 13px; white-space: pre-wrap; color: #6b7385; }
+  #warm { position: absolute; left: -2000px; top: 0; width: 800px; height: 600px; border: 0; }
+</style>
+</head>
+<body>
+<h1>5年日記帳</h1>
+<div id="msg">開いています…</div>
+<div id="log"></div>
+<iframe id="warm" title="起こし役"></iframe>
+<script>
+// 試験用：ページを開いた瞬間に見えない枠でシートを読み込み（起こし役）、wait秒後に同じタブでシートへ移る。ボタンは無い。
+// 使い方：アドレスの後ろに #id=スプレッドシートID&wait=5 を付けて開く。IDはページに書かない（#の後ろはどこにも送られない）。
+(function () {
+  var t0 = Date.now();
+  var p = {};
+  location.hash.replace(/^#/, '').split('&').forEach(function (kv) {
+    var i = kv.indexOf('='); if (i > 0) p[decodeURIComponent(kv.slice(0, i))] = decodeURIComponent(kv.slice(i + 1));
+  });
+  var id = (p.id || '').replace(/[^A-Za-z0-9_-]/g, '');
+  var wait = Math.max(0, Math.min(60, parseFloat(p.wait || '5') || 0));
+  var logEl = document.getElementById('log'), warm = document.getElementById('warm');
+  function log(m) { logEl.textContent += ((Date.now() - t0) / 1000).toFixed(1) + '秒 ' + m + '\n'; }
+  if (!id) { document.getElementById('msg').textContent = 'アドレスの後ろに #id=（スプレッドシートID） を付けて開いてください。'; return; }
+  var url = 'https://docs.google.com/spreadsheets/d/' + id + '/edit';
+  log('開始（' + new Date().toLocaleTimeString() + '）待ち' + wait + '秒');
+  warm.addEventListener('load', function () { log('見えない枠の読み込みが終わりました'); }, { once: true });
+  warm.src = url;
+  setTimeout(function () { log('シートへ移ります'); location.href = url; }, wait * 1000);
+})();
+</script>
+</body>
+</html>
