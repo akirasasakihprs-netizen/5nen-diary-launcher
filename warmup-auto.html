@@ -9,7 +9,8 @@
   body { font-family: "Meiryo", sans-serif; background: #f5efe3; color: #1e2a44; margin: 0; padding: 40px 16px; text-align: center; }
   h1 { font-size: 22px; margin: 0 0 16px; }
   #msg { font-size: 16px; }
-  #log { margin: 24px auto 0; max-width: 520px; text-align: left; font-size: 13px; white-space: pre-wrap; color: #6b7385; }
+  #log { margin: 24px auto 0; max-width: 640px; text-align: left; font-size: 13px; white-space: pre-wrap; color: #374057; background: #fff; border: 1px solid #d9c5a0; padding: 10px; }
+  #log:empty { display: none; }
   #warm { position: absolute; left: -2000px; top: 0; width: 800px; height: 600px; border: 0; }
 </style>
 </head>
@@ -21,22 +22,39 @@
 <script>
 // 試験用：ページを開いた瞬間に見えない枠でシートを読み込み（起こし役）、wait秒後に同じタブでシートへ移る。ボタンは無い。
 // 使い方：アドレスの後ろに #id=スプレッドシートID&wait=5 を付けて開く。IDはページに書かない（#の後ろはどこにも送られない）。
+// 記録：毎回の経過（開始・枠の読み込み終了・シートへ移る）をこの端末のブラウザの中に保存する（最新20回）。
+//       #log=1 を付けて開く（idは付けない）と、保存した記録を表示する。記録にIDは入れない。
 (function () {
+  var KEY = 'warmupLog';
   var t0 = Date.now();
   var p = {};
   location.hash.replace(/^#/, '').split('&').forEach(function (kv) {
     var i = kv.indexOf('='); if (i > 0) p[decodeURIComponent(kv.slice(0, i))] = decodeURIComponent(kv.slice(i + 1));
   });
+  function readLog() { try { return JSON.parse(localStorage.getItem(KEY) || '[]'); } catch (e) { return []; } }
+  function writeLog(list) { try { localStorage.setItem(KEY, JSON.stringify(list.slice(-20))); } catch (e) {} }
+  var logEl = document.getElementById('log'), msg = document.getElementById('msg'), warm = document.getElementById('warm');
+  if (p.log === '1') {
+    msg.textContent = '起こし役の試験の記録（新しい順、最新20回）';
+    var list = readLog().slice().reverse();
+    logEl.textContent = list.length ? list.map(function (r, n) {
+      return (n + 1) + '. ' + r.start + '　待ち' + r.wait + '秒\n   ' + (r.ev || []).join(' / ');
+    }).join('\n') : '記録はまだありません。';
+    return;
+  }
   var id = (p.id || '').replace(/[^A-Za-z0-9_-]/g, '');
   var wait = Math.max(0, Math.min(60, parseFloat(p.wait || '5') || 0));
-  var logEl = document.getElementById('log'), warm = document.getElementById('warm');
-  function log(m) { logEl.textContent += ((Date.now() - t0) / 1000).toFixed(1) + '秒 ' + m + '\n'; }
-  if (!id) { document.getElementById('msg').textContent = 'アドレスの後ろに #id=（スプレッドシートID） を付けて開いてください。'; return; }
+  if (!id) { msg.textContent = 'アドレスの後ろに #id=（スプレッドシートID） を付けて開いてください。記録を見る時は #log=1 を付けてください。'; return; }
   var url = 'https://docs.google.com/spreadsheets/d/' + id + '/edit';
-  log('開始（' + new Date().toLocaleTimeString() + '）待ち' + wait + '秒');
-  warm.addEventListener('load', function () { log('見えない枠の読み込みが終わりました'); }, { once: true });
+  var rec = { start: new Date().toLocaleString('ja-JP'), wait: wait, ev: [] };
+  var all = readLog(); all.push(rec);
+  function mark(m) { rec.ev.push(((Date.now() - t0) / 1000).toFixed(2) + '秒 ' + m); all[all.length - 1] = rec; writeLog(all); }
+  mark('開始');
+  warm.addEventListener('load', function () { mark('枠の読み込み終了'); }, { once: true });
   warm.src = url;
-  setTimeout(function () { log('シートへ移ります'); location.href = url; }, wait * 1000);
+  mark('枠の読み込み開始');
+  setTimeout(function () { mark('シートへ移る'); location.href = url; }, wait * 1000);
+  window.addEventListener('pagehide', function () { mark('このページを離れた'); });
 })();
 </script>
 </body>
