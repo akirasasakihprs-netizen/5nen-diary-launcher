@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>5年日記帳を開いています</title>
+<style>
+  body { font-family: "Meiryo", sans-serif; background: #f5efe3; color: #1e2a44; margin: 0; padding: 40px 16px; text-align: center; }
+  h1 { font-size: 22px; margin: 0 0 16px; }
+  #msg { font-size: 16px; }
+  #log { margin: 24px auto 0; max-width: 640px; text-align: left; font-size: 13px; white-space: pre-wrap; color: #374057; background: #fff; border: 1px solid #d9c5a0; padding: 10px; }
+  #log:empty { display: none; }
+  #warm { position: absolute; left: -2000px; top: 0; width: 800px; height: 600px; border: 0; }
+</style>
+</head>
+<body>
+<h1>5年日記帳</h1>
+<div id="msg">開いています…</div>
+<div id="log"></div>
+<iframe id="warm" title="起こし役"></iframe>
+<script>
+// 試験用・版3(2026-10-17、起動の順番の設計 L1〜L4)。版2からの変更：枠も今日の行を指定したアドレスで開く。
+//  L1 開いた瞬間に、端末の日付から5年ビューの今日の行を計算し、移る先を「…/edit#gid=(g)&range=A(今日の行)」にする。
+//  L2 開いた瞬間に、見えない枠でシートを読み込む(起こし役)。枠も移る先と同じアドレス(今日の行を指定)で開く。
+//  L3 枠の読み込みが終わったら移る。ただし min 秒より前には移らず、max 秒で必ず移る(既定 min=2・max=3)。
+//  L4 待っている間は「開いています…」だけを出す。
+// 使い方：アドレスの後ろに #id=スプレッドシートID&g=5年ビューのシートの番号 を付けて開く(min・maxは省略可)。
+//         IDはページに書かない(#の後ろはどこにも送られない)。gが無い時は、行を指定せずに開く。
+// 記録：毎回の経過をこの端末のブラウザの中に保存する(最新20回、warmup-auto.html・版2とは別の置き場所)。記録にIDは入れない。
+//       #log=1 を付けて開く(idは付けない)と、保存した記録を表示する。
+(function () {
+  var KEY = 'warmupLog3';
+  var t0 = Date.now();
+  var p = {};
+  location.hash.replace(/^#/, '').split('&').forEach(function (kv) {
+    var i = kv.indexOf('='); if (i > 0) p[decodeURIComponent(kv.slice(0, i))] = decodeURIComponent(kv.slice(i + 1));
+  });
+  function readLog() { try { return JSON.parse(localStorage.getItem(KEY) || '[]'); } catch (e) { return []; } }
+  function writeLog(list) { try { localStorage.setItem(KEY, JSON.stringify(list.slice(-20))); } catch (e) {} }
+  var logEl = document.getElementById('log'), msg = document.getElementById('msg'), warm = document.getElementById('warm');
+  if (p.log === '1') {
+    msg.textContent = '起こし役(版3)の試験の記録（新しい順、最新20回）';
+    var list = readLog().slice().reverse();
+    logEl.textContent = list.length ? list.map(function (r, n) {
+      return (n + 1) + '. ' + r.start + '　下限' + r.min + '秒・上限' + r.max + '秒・今日の行' + (r.row || 'なし') + '\n   ' + (r.ev || []).join(' / ');
+    }).join('\n') : '記録はまだありません。';
+    return;
+  }
+  var id = (p.id || '').replace(/[^A-Za-z0-9_-]/g, '');
+  var g = (p.g || '').replace(/[^0-9]/g, '');
+  var minS = Math.max(0, Math.min(10, parseFloat(p.min || '2') || 0));
+  var maxS = Math.max(minS, Math.min(30, parseFloat(p.max || '3') || 0));
+  if (!id) { msg.textContent = 'アドレスの後ろに #id=（スプレッドシートID）&g=（シートの番号） を付けて開いてください。記録を見る時は #log=1 を付けてください。'; return; }
+  var base = 'https://docs.google.com/spreadsheets/d/' + id + '/edit';
+  // L1：5年ビューの今日の行 = 7 + (1月1日からの日数) × 6。うるう年の2024年で数える(2月29日の行はいつもある。日記帳のonOpenと同じ式)
+  var now = new Date();
+  var dayIdx = Math.round((new Date(2024, now.getMonth(), now.getDate()) - new Date(2024, 0, 1)) / 86400000);
+  var row = 7 + dayIdx * 6;
+  var dest = g ? base + '#gid=' + g + '&range=A' + row : base;
+  var rec = { start: new Date().toLocaleString('ja-JP'), min: minS, max: maxS, row: g ? row : 0, ev: [] };
+  var all = readLog(); all.push(rec);
+  function mark(m) { rec.ev.push(((Date.now() - t0) / 1000).toFixed(2) + '秒 ' + m); all[all.length - 1] = rec; writeLog(all); }
+  var loaded = false, gone = false;
+  function go(reason) {
+    if (gone) return; gone = true;
+    mark('シートへ移る(' + reason + ')');
+    location.href = dest;
+  }
+  mark('開始');
+  // L2：見えない枠で起こす
+  warm.addEventListener('load', function () {
+    loaded = true; mark('枠の読み込み終了');
+    if ((Date.now() - t0) >= minS * 1000) go('読み込み終了');
+  }, { once: true });
+  warm.src = dest; // 版3：枠も今日の行を指定したアドレスで開く(枠の中のonOpenも今日への移動を省き、軽くなる)
+  mark('枠の読み込み開始');
+  // L3：下限に達した時に読み込みが終わっていれば移る。上限で必ず移る
+  setTimeout(function () { if (loaded) go('下限に達した'); }, minS * 1000);
+  setTimeout(function () { go('上限'); }, maxS * 1000);
+  window.addEventListener('pagehide', function () { mark('このページを離れた'); });
+})();
+</script>
+</body>
+</html>
